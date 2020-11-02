@@ -37,6 +37,10 @@
 	pedesal:    .asciz	"\nDigite seu salario: "
 	pedecpf:	.asciz	"\nDigite o CPF: "
 	pedegenero:	.asciz	"\nDigite o genero <M>asculino/<F>eminino: "
+	
+	pergmenu: .asciz	"\n\nMenu do usuário\n----------------\nDigite 1 p/ inserir\n2 p/ consultar\n3 p/ excluir\n4 p/ relatório\n0 p/ sair: "
+
+
 
 	mostranome:	.asciz	"\nNome: %s"
 	mostrarua:	.asciz	"\nRua: %s"
@@ -62,6 +66,10 @@
 	tipostr:	.ASCIZ	"%S"
 
 	lista:		.int	0
+	regist:		.int 	0
+	atual:		.int 	0
+
+	opcao:		.int 	0
 
 	NULL:		.int	0
 
@@ -70,13 +78,70 @@
 
 .globl _start
 _start:
-
-	call	ler_registro
-	call	mostrar_registro
-
-
+	movl	$NULL, %eax
+	movl	%eax, lista
+	call	menu
 	pushl	$0
 	call	exit
+
+menu:
+	# pergunta a opcao ao usuario
+	pushl	$pergmenu
+	call	printf
+	# obtem a resposta da opcao
+	addl	$4, %esp
+	pushl 	$opcao 
+	pushl 	$tipoint
+	call 	scanf
+	addl	$8, %esp
+	# veja se quer inserir 
+	movl opcao, %eax
+	cmpl $1, %eax
+	je insere
+	# veja se quer exibir 
+	cmpl $4, %eax
+	je mostra
+	# veja se quer sair
+	cmpl $0, %eax
+	je sair
+
+
+insere:
+	# cria um registro e armazena em regist
+	call 	ler_registro
+	# armazena o comeco da lista e endereco do null
+	movl	lista, %eax
+	movl	$NULL, %ebx
+	call 	insere_lista
+	jmp 	menu
+mostra:
+	call 	mostrar_registro
+	jmp 	menu
+sair:
+	ret
+
+insere_lista:
+	
+	# verifica se insere no comeco da lista
+	cmpl  	%eax, %ebx
+	je		comeco_lista
+	
+
+procura_fim:
+	movl	224(%eax), %eax	 # lista = lista -> proximo
+	cmpl  	%eax, %ebx # lista->proximo == NULL ?
+	je		insere_final
+	jmp procura_fim
+
+insere_final:
+	movl	$regist, %eax # lista->proximo = regist
+	ret
+comeco_lista:
+
+	movl	regist, %eax
+	movl	%eax, lista
+	ret
+
 
 ler_registro:
 
@@ -86,7 +151,7 @@ ler_registro:
 	# alocação do registro
 	pushl	tamreg
 	call	malloc
-	movl	%eax, lista
+	movl	%eax, regist
 	addl	$8, %esp
 
 	# leitura do nome
@@ -94,8 +159,9 @@ ler_registro:
 	call	printf
 	addl	$4, %esp
 
-	movl	lista, %edi
+	movl	regist, %edi
 	pushl	%edi
+	call	gets
 	call	gets
 
 	popl	%edi
@@ -284,6 +350,7 @@ ler_registro:
 
 	pushl	$tipocar
 	call	scanf
+	call	scanf
 	addl	$4, %esp
 	
 	popl	%edi
@@ -294,6 +361,8 @@ ler_registro:
 	movl	$NULL, (%edi)
 	
 	ret
+
+
 
 mostrar_registro:
 
