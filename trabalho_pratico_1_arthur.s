@@ -38,6 +38,7 @@
 	pedecpf:	.asciz	"\nDigite o CPF: "
 	pedegenero:	.asciz	"\nDigite o genero <M>asculino/<F>eminino: "
 	listvazia:	.asciz	"\nLISTA ESTÁ VAZIA!\n "
+	semnome:	.asciz	"\nNAO TEM REGISTRO COM ESSE NOME!\n "
 	pergmenu: .asciz	"\n\nMenu do usuário\n----------------\nDigite 1 p/ inserir\n2 p/ consultar\n3 p/ excluir\n4 p/ relatório\n0 p/ sair: "
 
 
@@ -99,12 +100,131 @@ menu:
 	movl opcao, %eax
 	cmpl $1, %eax
 	je insere
+	# veja se quer consultar
+	cmpl $2, %eax
+	je consultar
+	# veja se quer excluir
+	cmpl $3, %eax
+	je excluir
 	# veja se quer exibir 
 	cmpl $4, %eax
 	je mostra_todos
 	# veja se quer sair
 	cmpl $0, %eax
-	je sair
+	je _end
+
+excluir:
+	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
+	movl	$NULL, %ebx # endereco do null
+
+	cmpl  	$NULL, (%edi) # verifica se a lista esta vazia
+	je		lista_vazia
+
+	pushl	$pedenome # solicita ao usuario o nome
+	call	printf
+	addl	$4, %esp
+
+	pushl	$31 # tam do nome
+	call	malloc
+	movl	%eax, %ecx
+
+	pushl	%ecx # onde o nome sera armazenado
+	call	gets 
+	call	gets # contem o nome do usuario
+	popl	%ecx
+
+	movl	lista, %edx # conteudo do primeiro elemento da lista em edx
+	movl	$NULL, %ebx # endereco do null
+
+loopexcluir:
+
+	cmpl  	$NULL, %edx # lista->proximo == NULL ?
+	je		naoexiste	# chegou no final da lista, ou seja, nao existe esse nome
+	
+	pushl	%ebx
+	pushl	%ecx # empilha o nome do usuario digitado
+	pushl	%edx # empilha o nome do regist
+	call	strcmp
+	popl	%edx
+	popl	%ecx
+	popl	%ebx
+	cmpl  	$0, %eax # verifica se os nomes sao igauis
+	je		delete_reg # nome === lista.nome ?
+	
+	movl	%edx, %ebx # aramazena o registro anterior
+	movl	224(%edx), %edx # avanca pro proximo registro
+	
+	jmp loopexcluir
+
+delete_reg:
+	movl	lista, %eax # primeiro elemento da lista
+	cmpl  	%eax, %edx # primeiro elemento == elemento atual
+	je		remove_prim
+	
+	movl 	224(%edx), %edi # pega o proximo elemento da lista
+	movl	%edi, 224(%ebx)
+
+	jmp		menu
+
+remove_prim:
+	movl	224(%edx), %edi
+	movl	%edi, lista
+	jmp menu
+
+consultar:
+	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
+	movl	$NULL, %ebx # endereco do null
+
+	cmpl  	$NULL, (%edi) # verifica se a lista esta vazia
+	je		lista_vazia
+
+	pushl	$pedenome # solicita ao usuario o nome
+	call	printf
+	addl	$4, %esp
+
+	pushl	$31 # tam do nome
+	call	malloc
+	movl	%eax, %ecx
+
+	pushl	%ecx # onde o nome sera armazenado
+	call	gets 
+	call	gets # contem o nome do usuario
+	popl	%ecx
+
+	movl	lista, %edx # conteudo do primeiro elemento da lista em edx
+	movl	$NULL, %ebx # endereco do null
+
+
+loopconsulta:
+
+	movl	$NULL, %ebx # endereco do null
+	cmpl  	%edx, %ebx # lista->proximo == NULL ?
+	je		naoexiste	# chegou no final da lista, ou seja, nao existe esse nome
+	
+	pushl	%ebx
+	pushl	%ecx # empilha o nome do usuario digitado
+	pushl	%edx # empilha o nome do regist
+	call	strcmp
+	popl	%edx
+	popl	%ecx
+	popl	%ebx
+	cmpl  	$0, %eax # verifica se os nomes sao igauis
+	je		mostra_singular # nome === lista.nome ?
+	
+	movl	224(%edx), %edx
+	
+	jmp loopconsulta
+
+
+naoexiste:
+	pushl	$semnome
+	call	printf
+	jmp 	menu
+
+mostra_singular:
+	movl	%edx, (%edi)
+	call 	mostrar_registro
+	jmp		menu
 
 
 mostra_todos:
@@ -133,9 +253,6 @@ lista_vazia:
 	call printf
 	jmp		menu
 
-
-sair:
-	ret
 insere:
 	# cria um registro e armazena em regist
 	call 	ler_registro
