@@ -37,7 +37,7 @@
 	pedesal:    .asciz	"\nDigite seu salario: "
 	pedecpf:	.asciz	"\nDigite o CPF: "
 	pedegenero:	.asciz	"\nDigite o genero <M>asculino/<F>eminino: "
-	
+	listvazia:	.asciz	"\nLISTA ESTÁ VAZIA!\n "
 	pergmenu: .asciz	"\n\nMenu do usuário\n----------------\nDigite 1 p/ inserir\n2 p/ consultar\n3 p/ excluir\n4 p/ relatório\n0 p/ sair: "
 
 
@@ -101,22 +101,36 @@ menu:
 	je insere
 	# veja se quer exibir 
 	cmpl $4, %eax
-	je mostra
+	je mostra_todos
 	# veja se quer sair
 	cmpl $0, %eax
 	je sair
 
 
-mostra:
-	movl	lista, %edi # endereco do primeiro elemento da lista em edi
+mostra_todos:
+	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
 	movl	$NULL, %ebx # endereco do null
+
+	cmpl  	$NULL, (%edi) # verifica se a lista esta vazia
+	je		lista_vazia
+
+
 mostra_proximo:
-	movl	(%edi), %edi
-	call 	mostrar_registro
+
+
 	movl	$NULL, %ebx # endereco do null
 	cmpl  	(%edi), %ebx # lista->proximo == NULL ?
-	
-	jne		mostra_proximo
+
+	jne		mostra_reg
+	jmp		menu
+
+mostra_reg:
+	call 	mostrar_registro
+	jmp 	mostra_proximo
+
+lista_vazia:
+	pushl 	$listvazia
+	call printf
 	jmp		menu
 
 
@@ -126,7 +140,8 @@ insere:
 	# cria um registro e armazena em regist
 	call 	ler_registro
 	# armazena o comeco da lista e endereco do null
-	movl	lista, %ecx
+	movl	lista, %ecx # conteudo primeiro_elemento da lista
+	movl	regist, %edi # novo elemento a ser inserido
 	movl	$NULL, %ebx
 	call 	insere_lista
 	jmp 	menu
@@ -136,24 +151,55 @@ insere_lista:
 	# verifica se insere no comeco da lista
 	cmpl  	%ecx, %ebx
 	je		comeco_lista
+
+	# verfica se o regist possui nome menor que o que esta no comeco da lista
+	pushl	%ecx	# empilha o nome do primeiro elemento da lista
+	pushl	%edi # empilha o nome do regist
+	call	strcmp
+	popl	%edi
+	popl	%ecx
+
+	cmpl  	$0, %eax 
+	jle		troca_comeco # regist.nome < lista.nome ?
+
 	
 
-procura_fim:
-	movl	(%ecx), %ecx	 # pega o conteudo do regist
-	movl	224(%ecx), %ecx	 # lista = lista -> proximo
-	cmpl  	%ecx, %ebx # lista->proximo == NULL ?
-	je		insere_final
-	jmp procura_fim
+loop_ordena:
+	
+	cmpl  	$NULL, %ecx # verifica se esta no final
+	je		insere_ordenado
 
-insere_final:
+	pushl	%ebx
+	pushl	%ecx	# empilha o nome do primeiro elemento da lista
+	pushl	%edi # empilha o nome do regist
+	call	strcmp
+	popl	%edi
+	popl	%ecx
+	popl	%ebx
 
-	movl	$regist, (%ecx) # lista->proximo = regist
+	cmpl  	$0, %eax 
+
+	jle		insere_ordenado # regist.nome < lista.nome ?
+	
+	movl	%ecx, %ebx # element anteiror = elemento atual
+
+	movl	224(%ecx), %ecx # avanca pro prox element
+	jmp loop_ordena
+
+insere_ordenado:
+	
+	movl	%ecx, 224(%edi) # regist->prox = elemento atual
+	movl	%edi, 224(%ebx) # elemento anterior->proximo = novo
 	ret
-	
-comeco_lista:
 
-	movl	$regist, %ecx
-	movl	%ecx, lista
+troca_comeco:
+	movl	%edi, lista # lista = regist
+	movl	%ecx, 224(%edi) # regist->proximo = primeiro_element_lista
+	ret
+
+
+comeco_lista:
+	movl	%edi, lista
 	ret
 
 
@@ -218,6 +264,7 @@ ler_registro:
 
 	call	gets
 	call	gets
+	
 
 	popl	%edi
 	addl	$21, %edi # prossegue 21 bytes do bairro
@@ -364,6 +411,7 @@ ler_registro:
 
 	pushl	$tipocar
 	call	scanf
+	call	scanf
 	addl	$4, %esp 
 	
 	popl	%edi
@@ -383,6 +431,7 @@ mostrar_registro:
 	call	printf
 	addl	$4, %esp
 
+	movl	(%edi), %edi
 
 	pushl	%edi
 
