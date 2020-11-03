@@ -81,6 +81,7 @@ _start:
 	movl	$NULL, %eax
 	movl	%eax, lista
 	call	menu
+_end:
 	pushl	$0
 	call	exit
 
@@ -106,40 +107,53 @@ menu:
 	je sair
 
 
+mostra:
+	movl	lista, %edi # endereco do primeiro elemento da lista em edi
+	movl	$NULL, %ebx # endereco do null
+mostra_proximo:
+	movl	(%edi), %edi
+	call 	mostrar_registro
+	movl	$NULL, %ebx # endereco do null
+	cmpl  	(%edi), %ebx # lista->proximo == NULL ?
+	
+	jne		mostra_proximo
+	jmp		menu
+
+
+sair:
+	ret
 insere:
 	# cria um registro e armazena em regist
 	call 	ler_registro
 	# armazena o comeco da lista e endereco do null
-	movl	lista, %eax
+	movl	lista, %ecx
 	movl	$NULL, %ebx
 	call 	insere_lista
 	jmp 	menu
-mostra:
-	call 	mostrar_registro
-	jmp 	menu
-sair:
-	ret
 
 insere_lista:
 	
 	# verifica se insere no comeco da lista
-	cmpl  	%eax, %ebx
+	cmpl  	%ecx, %ebx
 	je		comeco_lista
 	
 
 procura_fim:
-	movl	224(%eax), %eax	 # lista = lista -> proximo
-	cmpl  	%eax, %ebx # lista->proximo == NULL ?
+	movl	(%ecx), %ecx	 # pega o conteudo do regist
+	movl	224(%ecx), %ecx	 # lista = lista -> proximo
+	cmpl  	%ecx, %ebx # lista->proximo == NULL ?
 	je		insere_final
 	jmp procura_fim
 
 insere_final:
-	movl	$regist, %eax # lista->proximo = regist
+
+	movl	$regist, (%ecx) # lista->proximo = regist
 	ret
+	
 comeco_lista:
 
-	movl	regist, %eax
-	movl	%eax, lista
+	movl	$regist, %ecx
+	movl	%ecx, lista
 	ret
 
 
@@ -350,14 +364,13 @@ ler_registro:
 
 	pushl	$tipocar
 	call	scanf
-	call	scanf
-	addl	$4, %esp
+	addl	$4, %esp 
 	
 	popl	%edi
 
-	# colocar o endereco do null
-	addl	$4, %edi
+	addl	$4, %edi # prossegue 4 bytes do genero
 
+	# colocar o endereco do null
 	movl	$NULL, (%edi)
 	
 	ret
@@ -370,8 +383,6 @@ mostrar_registro:
 	call	printf
 	addl	$4, %esp
 
-
-	movl	lista, %edi
 
 	pushl	%edi
 
