@@ -113,33 +113,34 @@ menu:
 	cmpl $0, %eax
 	je _end
 
+# funcao que exclui o registro dado um nome
 excluir:
 	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
 	movl	$NULL, %ebx # endereco do null
 
-	cmpl  	$NULL, (%edi) # verifica se a lista esta vazia
+	cmpl  	$NULL, (%edi) # verifica se o endereco do null eh igual ao do primeiro elemento da lsita
 	je		lista_vazia
 
-	pushl	$pedenome # solicita ao usuario o nome
+	pushl	$pedenome # solicita ao usuario o nome a excluir
 	call	printf
 	addl	$4, %esp
 
-	pushl	$31 # tam do nome
+	pushl	$31 # tam do nome que ser lido
 	call	malloc
 	movl	%eax, %ecx
 
-	pushl	%ecx # onde o nome sera armazenado
+	pushl	%ecx # ecx eh onde o nome sera armazenado
 	call	gets 
-	call	gets # contem o nome do usuario
+	call	gets 
 	popl	%ecx
 
 	movl	lista, %edx # conteudo do primeiro elemento da lista em edx
 	movl	$NULL, %ebx # endereco do null
-
+# loop para procurar o elemento a ser excluido
 loopexcluir:
 
-	cmpl  	$NULL, %edx # lista->proximo == NULL ?
-	je		naoexiste	# chegou no final da lista, ou seja, nao existe esse nome
+	cmpl  	$NULL, %edx # verifica se chegou no final da lista
+	je		naoexiste	# chegou no final da lista, ou seja, nao existe esse nome para excluir
 	
 	pushl	%ebx
 	pushl	%ecx # empilha o nome do usuario digitado
@@ -155,7 +156,7 @@ loopexcluir:
 	movl	224(%edx), %edx # avanca pro proximo registro
 	
 	jmp loopexcluir
-
+# verfica se precisa excluir no comeco ou fim, quando achado o elemento
 delete_reg:
 	movl	lista, %eax # primeiro elemento da lista
 	cmpl  	%eax, %edx # primeiro elemento == elemento atual
@@ -165,12 +166,13 @@ delete_reg:
 	movl	%edi, 224(%ebx)
 
 	jmp		menu
-
+# remove o primeiro elemento da lsita
 remove_prim:
 	movl	224(%edx), %edi
 	movl	%edi, lista
 	jmp menu
 
+# funcao para consultar um registro dado um nome
 consultar:
 	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
 	movl	$NULL, %ebx # endereco do null
@@ -194,14 +196,14 @@ consultar:
 	movl	lista, %edx # conteudo do primeiro elemento da lista em edx
 	movl	$NULL, %ebx # endereco do null
 
-
+# loop para procurar o elemento a ser consultado
 loopconsulta:
 
 	movl	$NULL, %ebx # endereco do null
 	cmpl  	%edx, %ebx # lista->proximo == NULL ?
 	je		naoexiste	# chegou no final da lista, ou seja, nao existe esse nome
 	
-	pushl	%ebx
+	pushl	%ebx 
 	pushl	%ecx # empilha o nome do usuario digitado
 	pushl	%edx # empilha o nome do regist
 	call	strcmp
@@ -209,24 +211,24 @@ loopconsulta:
 	popl	%ecx
 	popl	%ebx
 	cmpl  	$0, %eax # verifica se os nomes sao igauis
-	je		mostra_singular # nome === lista.nome ?
+	je		mostra_singular # os nomes sao iguais, ou seja, mostra o registro
 	
-	movl	224(%edx), %edx
+	movl	224(%edx), %edx # segue para o proximo registro
 	
 	jmp loopconsulta
 
-
+# exibe a mensagem que o usuario nao existe
 naoexiste:
 	pushl	$semnome
 	call	printf
 	jmp 	menu
-
+# mostra em detalhes o registro que esta em edx
 mostra_singular:
 	movl	%edx, (%edi)
 	call 	mostrar_registro
 	jmp		menu
 
-
+# mostra todos os registros que estao em lista
 mostra_todos:
 	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
 	movl	$NULL, %ebx # endereco do null
@@ -234,25 +236,26 @@ mostra_todos:
 	cmpl  	$NULL, (%edi) # verifica se a lista esta vazia
 	je		lista_vazia
 
-
+# mostra o proximo registro
 mostra_proximo:
 
 
 	movl	$NULL, %ebx # endereco do null
-	cmpl  	(%edi), %ebx # lista->proximo == NULL ?
+	cmpl  	(%edi), %ebx # lista->proximo == endereco do null
 
 	jne		mostra_reg
 	jmp		menu
-
+# vai mostrar o registro em edi e seguir para mostrar o proximo
 mostra_reg:
 	call 	mostrar_registro
 	jmp 	mostra_proximo
 
+# exibe mensagem que a lista está vazia
 lista_vazia:
 	pushl 	$listvazia
 	call printf
 	jmp		menu
-
+# funcao que insere um elemento ordenado por nome na lista
 insere:
 	# cria um registro e armazena em regist
 	call 	ler_registro
@@ -262,7 +265,7 @@ insere:
 	movl	$NULL, %ebx
 	call 	insere_lista
 	jmp 	menu
-
+# verifica se vai inserir no comeco ou vai percorrer a lista para inserir ordenado
 insere_lista:
 	
 	# verifica se insere no comeco da lista
@@ -278,13 +281,11 @@ insere_lista:
 
 	cmpl  	$0, %eax 
 	jle		troca_comeco # regist.nome < lista.nome ?
-
+# procura a posição na qual regist será introduzido, de forma ordenada
+loop_insere:
 	
-
-loop_ordena:
-	
-	cmpl  	$NULL, %ecx # verifica se esta no final
-	je		insere_ordenado
+	cmpl  	$NULL, %ecx # verifica se esta no final 
+	je		insere_ordenado # insere no final
 
 	pushl	%ebx
 	pushl	%ecx	# empilha o nome do primeiro elemento da lista
@@ -301,25 +302,25 @@ loop_ordena:
 	movl	%ecx, %ebx # element anteiror = elemento atual
 
 	movl	224(%ecx), %ecx # avanca pro prox element
-	jmp loop_ordena
-
+	jmp loop_insere
+# realiza a troca ordenada
 insere_ordenado:
 	
 	movl	%ecx, 224(%edi) # regist->prox = elemento atual
-	movl	%edi, 224(%ebx) # elemento anterior->proximo = novo
+	movl	%edi, 224(%ebx) # elemento anterior->proximo = regist
 	ret
-
+# caso que precisa trocar o regist com o elemento do comeco da lista
 troca_comeco:
 	movl	%edi, lista # lista = regist
 	movl	%ecx, 224(%edi) # regist->proximo = primeiro_element_lista
 	ret
 
-
+# caso base, insere no comeco se nao tiver elemento na lista
 comeco_lista:
 	movl	%edi, lista
 	ret
 
-
+# vai ler o registro e colocar na variavel regist
 ler_registro:
 
 	pushl	$abertura
@@ -541,7 +542,7 @@ ler_registro:
 	ret
 
 
-
+# vai mostrar o registro que esta em edi
 mostrar_registro:
 
 	pushl	$exibicao
