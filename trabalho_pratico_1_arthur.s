@@ -221,6 +221,7 @@ loopconsulta:
 naoexiste:
 	pushl	$semnome
 	call	printf
+	addl	$4, %esp
 	jmp 	menu
 # mostra em detalhes o registro que esta em edx
 mostra_singular:
@@ -254,6 +255,7 @@ mostra_reg:
 lista_vazia:
 	pushl 	$listvazia
 	call printf
+	addl	$4, %esp
 	jmp		menu
 # funcao que insere um elemento ordenado por nome na lista
 insere:
