@@ -174,10 +174,10 @@ remove_prim:
 
 # funcao para consultar um registro dado um nome
 consultar:
-	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
+	movl	$lista, %ecx # endereco do primeiro elemento da lista em ecx
 	movl	$NULL, %ebx # endereco do null
 
-	cmpl  	$NULL, (%edi) # verifica se a lista esta vazia
+	cmpl  	$NULL, (%ecx) # verifica se a lista esta vazia
 	je		lista_vazia
 
 	pushl	$pedenome # solicita ao usuario o nome
@@ -186,12 +186,12 @@ consultar:
 
 	pushl	$31 # tam do nome
 	call	malloc
-	movl	%eax, %ecx
+	movl	%eax, %edi
 
-	pushl	%ecx # onde o nome sera armazenado
+	pushl	%edi # onde o nome sera armazenado
 	call	gets 
 	call	gets # contem o nome do usuario
-	popl	%ecx
+	popl	%edi
 
 	movl	lista, %edx # conteudo do primeiro elemento da lista em edx
 	movl	$NULL, %ebx # endereco do null
@@ -204,11 +204,11 @@ loopconsulta:
 	je		naoexiste	# chegou no final da lista, ou seja, nao existe esse nome
 	
 	pushl	%ebx 
-	pushl	%ecx # empilha o nome do usuario digitado
+	pushl	%edi # empilha o nome do usuario digitado
 	pushl	%edx # empilha o nome do regist
 	call	strcmp
 	popl	%edx
-	popl	%ecx
+	popl	%edi
 	popl	%ebx
 	cmpl  	$0, %eax # verifica se os nomes sao igauis
 	je		mostra_singular # os nomes sao iguais, ou seja, mostra o registro
