@@ -64,6 +64,7 @@
 	
 
 	tamreg:		.int	232
+	tamregGra:	.int	228
 
 	tipoint:	.asciz	"%d"
 	tipocar:	.asciz	"%c"
@@ -169,6 +170,7 @@ fechaArq:
 	ret
 # funcao que realiza a leitura dos registros salvo em um arq
 leitura:
+
 	movl	$NULL, %eax
 	movl	%eax, lista # a lista é reinicializada com o endereço de null
 
@@ -184,22 +186,55 @@ leitura:
 	call 	lerArq
 # funcao que vai realizar a leitura dos registros e salvar na lista
 lerArq:
+
+	pushl	tamregGra
+	call 	malloc
+	addl	$4, %esp
+	movl	%eax, %ecx # 228 bytes para cada registro
+	
 	movl 	SYS_READ, %eax # %eax retorna numero de bytes lidos
 	movl 	descritor, %ebx # recupera o descritor
-	movl 	$registro, %ecx
-	movl 	tamreg, %edx
+	movl 	tamregGra, %edx
 	int 	$0x80 # le registro do arquivo
-	
 	cmpl 	$0, %eax # veja se chegou no final do arq
 	
 	je 		fechaEMenu
 
-	movl	lista, %ecx # conteudo primeiro_elemento da lista
-	movl	registro, %edi # novo elemento a ser inserido
-	movl	$NULL, %ebx
-	call 	insere_lista # insere o conteudo que está em edi na lista
-
+	call 	insere_lista_de_arq
 	jmp 	lerArq
+# funcao que vai inserir registro do arquivo para lista
+insere_lista_de_arq:
+	movl 	%ecx, %edi # move o conteudo de registro para edi
+	
+	movl	$NULL, 228(%edi) #  atual->proximo = endereco de null
+	
+	movl	$lista, %eax # endereco do primeiro elemento da lista em eax
+	cmpl  	$NULL, (%eax) # verifica se o endereco do null eh igual ao do primeiro elemento da lsita
+	je		insere_primeiro
+
+	movl	lista, %edx # conteudo do primeiro elemento da lista em edx
+	
+# loop para procurar o fim da lista
+loop_insere_de_arq:
+	cmpl  	$NULL, %edx # verifica se chegou no final da lista
+	je		insere_ultimo	# chegou no final da lista, ou seja, nao existe esse nome para excluir
+
+	movl	%edx, %ebx # guarda o anterior em ebx
+	movl	228(%edx), %edx # avanca pro proximo registro
+	
+	jmp 	loop_insere_de_arq
+
+# se chegar ao final da lista, insere o elemento
+insere_ultimo:
+
+	movl 	%edi, 228(%ebx) # pega o registro e coloca no endereço que edx está apontando
+	ret
+
+# se for o primeiro elemento da lista, ele vira a cabeça da lista
+insere_primeiro:
+	movl	%edi, lista
+	ret		
+
 # fecha o arquivo e volta para o menu
 fechaEMenu:
 	call 	fechaArq
@@ -216,6 +251,12 @@ abreArqE:
 # funcao que realiza a escrita de todos os registros em um arq
 escrita:
 
+	movl	lista, %edi # endereco do primeiro elemento da lista em edi
+	movl	$NULL, %ebx # endereco do null
+
+	cmpl  	$NULL, %edi # verifica se o endereco do null eh igual ao do primeiro elemento da lsita
+	je		lista_vazia
+
 	pushl 	$pedeNomeArq
 	call 	printf
 	pushl 	$nomeArq # variavel que conterá o nome do arq
@@ -224,16 +265,10 @@ escrita:
 	addl 	$8, %esp
 
 	call	abreArq # abre o arquivo
-
-	movl	$lista, %edi # endereco do primeiro elemento da lista em edi
-	movl	$NULL, %ebx # endereco do null
-
-	cmpl  	$NULL, (%edi) # verifica se o endereco do null eh igual ao do primeiro elemento da lsita
-	je		lista_vazia
 # escreve cada registro ate chegar no final da lista
 loopescrita:
 	movl	$NULL, %ebx # endereco do null
-	cmpl  	(%edi), %ebx # lista->proximo == endereco do null	
+	cmpl  	%edi, %ebx # lista->proximo == endereco do null	
 	jne		gravaReg
 
 	call	fechaArq # fecha o arq
@@ -245,10 +280,9 @@ abreArq:
 	movl 	SYS_OPEN, %eax 	# system call OPEN: retorna o descritor em %eax
 	movl 	$nomeArq, %ebx
 	movl 	O_WRONLY, %ecx
+	orl		O_TRUNC, %ecx
 	orl 	O_CREAT, %ecx
-	orl 	O_TRUNC, %ecx
-	movl 	S_IRUSR, %edx
-	orl 	S_IWUSR, %edx
+	movl 	S_IRWXU, %edx
 	int 	$0x80
 	movl 	%eax, descritor # guarda o descritor
 	ret
@@ -257,11 +291,11 @@ gravaReg:
 	movl	%edi, %ecx 	# move o endereco que edi está apontando para ecx
 	movl 	SYS_WRITE, %eax # abre o arquivo p/ escrita
 	movl 	descritor, %ebx # recupera o descritor
-	movl 	tamreg, %edx # tam do registro 232
+	movl 	tamregGra, %edx # tam do registro 232 - 4 (porque nao queremos o ponteiro p/ proximo) = 228 
 	int 	$0x80
 	
-	movl	(%edi), %edi # recupera o conteudo que edi está apontando e coloca em edi
-	addl	$228, %edi # avanca pro proximo registro, 228 => campo do proximo
+	movl	228(%edi), %edi # recupera o conteudo que edi está apontando e coloca em edi
+	# addl	$228, %edi # avanca pro proximo registro, 228 => campo do proximo
 	jmp 	loopescrita
 
 # funcao que realiza reajuste salarial
@@ -524,6 +558,7 @@ troca_comeco:
 
 # caso base, insere no comeco se nao tiver elemento na lista
 comeco_lista:
+
 	movl	%edi, lista
 	ret
 
