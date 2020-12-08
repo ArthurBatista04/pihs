@@ -295,7 +295,6 @@ gravaReg:
 	int 	$0x80
 	
 	movl	228(%edi), %edi # recupera o conteudo que edi está apontando e coloca em edi
-	# addl	$228, %edi # avanca pro proximo registro, 228 => campo do proximo
 	jmp 	loopescrita
 
 # funcao que realiza reajuste salarial
